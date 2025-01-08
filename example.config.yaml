@@ -1,0 +1,7 @@
+# Example YAML configuration file for DigitalOcean Droplet CLI
+
+api_token: "your_digitalocean_api_token"  # Replace with your DigitalOcean API token
+droplet_name: "example-droplet"          # Name for the droplet
+region: "nyc3"                           # DigitalOcean region (e.g., nyc3, sfo3)
+size: "s-1vcpu-1gb"                      # Droplet size slug (e.g., s-1vcpu-1gb)
+image: "ubuntu-20-04-x64"               # Image slug (e.g., ubuntu-20-04-x64)
