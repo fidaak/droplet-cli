@@ -32,6 +32,10 @@ def create_droplet(api_token, droplet_name, region, size, image, ssh_keys):
             time.sleep(5)
             action.load()
     
+    while not droplet.ip_address:
+        droplet.load()
+        time.sleep(5)
+    
     return droplet
 
 def setup_ssh_keys(ssh_key_paths):
