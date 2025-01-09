@@ -10,17 +10,13 @@ def load_yaml_config(file_path):
     with open(file_path, 'r') as file:
         return yaml.safe_load(file)
 
-def create_droplet(api_token, droplet_name, region, size, image, ssh_keys):
-    manager = digitalocean.Manager(token=api_token)
-    ssh_key_ids = [key.id for key in manager.get_all_sshkeys() if key.name in ssh_keys]
-
+def create_droplet(api_token, droplet_name, region, size, image):
     droplet = digitalocean.Droplet(
         token=api_token,
         name=droplet_name,
         region=region,
         size_slug=size,
         image=image,
-        ssh_keys=ssh_key_ids,
         user_data=None
     )
 
@@ -38,15 +34,33 @@ def create_droplet(api_token, droplet_name, region, size, image, ssh_keys):
     
     return droplet
 
-def setup_ssh_keys(ssh_key_paths):
-    ssh_keys = []
+def setup_ssh_keys(client, ssh_key_paths):
+    """Copy SSH private keys to the droplet and set proper permissions"""
+    if not ssh_key_paths:
+        return
+        
+    # Create .ssh directory
+    client.exec_command('mkdir -p ~/.ssh')
+    client.exec_command('chmod 700 ~/.ssh')
+    
     for key_path in ssh_key_paths:
-        if os.path.isfile(key_path):
-            with open(key_path, 'r') as key_file:
-                ssh_keys.append(key_file.read().strip())
-        else:
+        if not os.path.isfile(key_path):
             print(f"SSH key file not found: {key_path}")
-    return ssh_keys
+            continue
+            
+        # Copy key file
+        key_name = os.path.basename(key_path)
+        with open(key_path, 'r') as key_file:
+            key_content = key_file.read()
+            
+        sftp = client.open_sftp()
+        remote_path = f'/root/.ssh/{key_name}'
+        with sftp.file(remote_path, 'w') as remote_file:
+            remote_file.write(key_content)
+        sftp.close()
+        
+        # Set proper permissions
+        client.exec_command(f'chmod 600 {remote_path}')
 
 def configure_port_tunneling(client, ports):
     for port in ports:

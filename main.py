@@ -23,21 +23,32 @@ def cli_entry():
     size = config['size']
     image = config['image']
     
-    ssh_keys = setup_ssh_keys(args.ssh_keys) if args.ssh_keys else []
-
     print("Creating droplet...")
-    droplet = create_droplet(api_token, droplet_name, region, size, image, ssh_keys)
+    droplet = create_droplet(api_token, droplet_name, region, size, image)
 
     print("Droplet created successfully!")
     print(f"Droplet IP Address: {droplet.ip_address}")
 
+    # Wait for SSH to be available
+    time.sleep(30)
+
+    print("Setting up SSH connection...")
+    ssh = SSHClient()
+    ssh.set_missing_host_key_policy(AutoAddPolicy())
+    
+    # Use the first SSH key for initial connection if provided
+    key_filename = args.ssh_keys[0] if args.ssh_keys else None
+    ssh.connect(droplet.ip_address, username='root', key_filename=key_filename)
+
+    if args.ssh_keys:
+        print("Copying SSH keys to droplet...")
+        setup_ssh_keys(ssh, args.ssh_keys)
+
     if args.ports:
-        print("Setting up SSH and port tunneling...")
-        ssh = SSHClient()
-        ssh.set_missing_host_key_policy(AutoAddPolicy())
-        ssh.connect(droplet.ip_address, username='root', key_filename=args.ssh_keys[0])
+        print("Setting up port tunneling...")
         configure_port_tunneling(ssh, args.ports)
-        ssh.close()
+    
+    ssh.close()
 
 if __name__ == "__main__":
     cli_entry()
